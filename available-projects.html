@@ -1,0 +1,242 @@
+<section class="available-section section">
+  <div class="container">
+    <div class="available-header" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.25rem;">
+      <h2 class="section-title" style="margin:0;">Available Films & Series</h2>
+      <div class="available-controls" style="display:flex;gap:.75rem;align-items:center;">
+        <input id="availSearch" type="search" placeholder="Search titles, genres, cast..." style="padding:.5rem .75rem;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;">
+        <select id="availFilter" style="padding:.5rem .75rem;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;">
+          <option value="">All genres</option>
+          <option value="Drama">Drama</option>
+          <option value="Sci-Fi">Sci-Fi</option>
+          <option value="Comedy">Comedy</option>
+          <option value="Documentary">Documentary</option>
+        </select>
+        <button id="availClear" class="btn btn-secondary" style="padding:.45rem .75rem;border-radius:6px;">Clear</button>
+      </div>
+    </div>
+
+    <div class="available-grid" id="availableGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;">
+      <!-- populated by renderAvailableProjects() -->
+    </div>
+
+    <div class="available-footer" style="display:flex;align-items:center;justify-content:space-between;margin-top:1rem;">
+      <div class="available-stats" id="availableStats" style="color:var(--muted);opacity:.9;">0 titles</div>
+      <div class="available-pagination" id="availablePagination" style="display:flex;gap:.5rem;align-items:center;"></div>
+    </div>
+  </div>
+
+  <style>
+    /* Scoped styles for Available Films & Series (keeps visual harmony with Featured section) */
+    .available-section .project-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius: 10px;
+      padding: 12px;
+      display:flex;
+      gap:.75rem;
+      align-items:flex-start;
+      transition:transform .18s ease, box-shadow .18s ease;
+      cursor:pointer;
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    .available-section .project-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .available-section .thumb {
+      min-width:120px;
+      height:96px;
+      border-radius:8px;
+      background-size:cover;
+      background-position:center;
+      flex-shrink:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:2rem;
+      color:var(--white);
+    }
+    .available-section .project-info { flex:1; display:flex;flex-direction:column;gap:.35rem; }
+    .available-section .project-title { margin:0;font-size:1.05rem;font-weight:700;color:var(--white); }
+    .available-section .project-meta { margin:0;color:var(--muted);font-size:.9rem; }
+    .available-section .project-desc { margin-top:.35rem;color:var(--white);opacity:.85;font-size:.95rem;line-height:1.2;max-height:3.6rem;overflow:hidden;text-overflow:ellipsis; }
+    .available-section .project-badges { margin-top:.45rem; display:flex;gap:.5rem; align-items:center; flex-wrap:wrap; }
+    .available-section .badge { padding:.25rem .5rem;border-radius:6px;font-size:.8rem;background:rgba(255,255,255,0.03);color:var(--gold);border:1px solid rgba(255,255,255,0.02); }
+    .available-section .meta-row { display:flex;gap:1rem;color:var(--muted);font-size:.85rem;margin-top:.35rem;align-items:center; }
+    .available-section .play-icon { background:rgba(0,0,0,0.35);padding:.25rem;border-radius:6px; }
+    .available-section .pagination-btn { padding:.35rem .6rem;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;cursor:pointer; }
+    .available-section .pagination-btn.active { background:var(--gold);color:var(--black);border-color:transparent; }
+    @media (max-width:640px) {
+      .available-section .project-card { padding:10px; }
+      .available-section .thumb { min-width:88px;height:68px; }
+    }
+  </style>
+
+  <script>
+    (function(){
+      // Lightweight sanitizer
+      function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+      function renderAvailableProjects(items, opts = {}) {
+        const grid = document.getElementById('availableGrid');
+        const stats = document.getElementById('availableStats');
+        if(!grid) return;
+        const perPage = opts.perPage || 6;
+        const page = opts.page || 1;
+
+        // filter/search handled by wrapper; assume items is already the subset for current filters
+        const total = items.length;
+        const pages = Math.max(1, Math.ceil(total / perPage));
+        const start = (page - 1) * perPage;
+        const paged = items.slice(start, start + perPage);
+
+        grid.innerHTML = '';
+        paged.forEach(p => {
+          const thumbUrl = p.thumbnail || '';
+          const div = document.createElement('div');
+          div.className = 'project-card';
+          div.setAttribute('data-id', p.id || '');
+          div.innerHTML = `<div class="thumb" style="${thumbUrl ? "background-image:url('"+escapeHtml(thumbUrl)+"')" : ''}">${!thumbUrl ? escapeHtml(p.placeholder || '🎭') : ''}</div>
+            <div class="project-info">
+              <h3 class="project-title">${escapeHtml(p.title || 'Untitled')}</h3>
+              <div class="project-meta">${escapeHtml(p.genre || '')} • ${escapeHtml(p.runtime || '')}</div>
+              <p class="project-desc">${escapeHtml(p.description || '')}</p>
+              <div class="project-badges">
+                ${p.release_date ? `<span class="badge">Release: ${escapeHtml(p.release_date)}</span>` : ''}
+                ${p.status ? `<span class="badge">${escapeHtml(p.status)}</span>` : ''}
+                ${p.featured ? `<span class="badge">Featured</span>` : ''}
+              </div>
+              <div class="meta-row">
+                <div style="display:flex;gap:.5rem;align-items:center;">
+                  <div class="play-icon">▶</div>
+                  <div style="opacity:.9">${escapeHtml(p.views ? String(p.views)+' views' : '')}</div>
+                </div>
+                <div style="margin-left:auto;color:var(--muted)">${escapeHtml(p.rating ? p.rating+'/10' : '')}</div>
+              </div>
+            </div>`;
+          // click -> open video or details
+          div.addEventListener('click', () => {
+            if (p.youtube_id && typeof openVideo === 'function') {
+              openVideo(p.youtube_id);
+            } else if (p.detail_url) {
+              window.location.href = p.detail_url;
+            } else {
+              // small detail modal
+              alert((p.title || 'Untitled') + "\n\n" + (p.description || 'No description available.'));
+            }
+          });
+          grid.appendChild(div);
+        });
+
+        // stats and pagination
+        if(stats) stats.textContent = total + (total === 1 ? ' title' : ' titles');
+
+        renderAvailablePagination(pages, page);
+      }
+
+      function renderAvailablePagination(totalPages, currentPage){
+        const container = document.getElementById('availablePagination');
+        if(!container) return;
+        container.innerHTML = '';
+
+        function makeBtn(label, page, active){
+          const b = document.createElement('button');
+          b.className = 'pagination-btn' + (active ? ' active' : '');
+          b.textContent = label;
+          b.disabled = active;
+          b.addEventListener('click', () => applyPagination(page));
+          return b;
+        }
+
+        if (totalPages <= 1) return;
+
+        // previous
+        container.appendChild(makeBtn('‹', Math.max(1, currentPage - 1), false));
+
+        // simple page range (capped)
+        const start = Math.max(1, currentPage - 2);
+        const end = Math.min(totalPages, currentPage + 2);
+        for(let p = start; p <= end; p++){
+          container.appendChild(makeBtn(String(p), p, p === currentPage));
+        }
+
+        // next
+        container.appendChild(makeBtn('›', Math.min(totalPages, currentPage + 1), false));
+      }
+
+      // State + filtering + pagination
+      let AVAILABLE_ITEMS = [];
+      let availState = { page: 1, perPage: 6, query: '', genre: '' };
+
+      function applyFiltersAndRender(){
+        let items = AVAILABLE_ITEMS.slice();
+        const q = (availState.query || '').trim().toLowerCase();
+        if (q) {
+          items = items.filter(i => {
+            return (i.title && i.title.toLowerCase().includes(q)) ||
+                   (i.description && i.description.toLowerCase().includes(q)) ||
+                   (i.genre && i.genre.toLowerCase().includes(q)) ||
+                   (i.cast && i.cast.join(' ').toLowerCase().includes(q));
+          });
+        }
+        if (availState.genre) {
+          items = items.filter(i => String(i.genre || '').toLowerCase() === String(availState.genre || '').toLowerCase());
+        }
+        const pages = Math.max(1, Math.ceil(items.length / availState.perPage));
+        if (availState.page > pages) availState.page = pages;
+        renderAvailableProjects(items, { page: availState.page, perPage: availState.perPage });
+      }
+
+      function applyPagination(page){
+        availState.page = page;
+        applyFiltersAndRender();
+        window.scrollTo({ top: document.querySelector('.available-section').offsetTop - 80, behavior: 'smooth' });
+      }
+
+      // wire controls
+      document.addEventListener('DOMContentLoaded', () => {
+        const search = document.getElementById('availSearch');
+        const filter = document.getElementById('availFilter');
+        const clear = document.getElementById('availClear');
+
+        if(search){
+          let timer;
+          search.addEventListener('input', (e) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+              availState.query = e.target.value;
+              availState.page = 1;
+              applyFiltersAndRender();
+            }, 250);
+          });
+        }
+
+        if(filter){
+          filter.addEventListener('change', (e) => {
+            availState.genre = e.target.value;
+            availState.page = 1;
+            applyFiltersAndRender();
+          });
+        }
+
+        if(clear){
+          clear.addEventListener('click', () => {
+            availState = { page:1, perPage:availState.perPage, query:'', genre:'' };
+            if(search) search.value = '';
+            if(filter) filter.value = '';
+            applyFiltersAndRender();
+          });
+        }
+      });
+
+      // public helper to populate the available section from remote data
+      window.renderAvailableSection = function(items){
+        if(!Array.isArray(items)) items = [];
+        AVAILABLE_ITEMS = items;
+        availState.page = 1;
+        applyFiltersAndRender();
+      };
+
+      // If the page calls this file after fetching home data, it can simply call:
+      // renderAvailableSection(data.projects || []);
+    })();
+  </script>
+</section>
